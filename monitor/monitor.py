@@ -77,18 +77,43 @@ def send_to_elasticsearch(result):
         print(f"[!] Не удалось отправить в Elasticsearch: {e}")
 
 
+def send_telegram(message):
+    """Отправляем сообщение в Telegram. Токен и chat_id берём из переменных окружения.
+    Если они не заданы — тихо пропускаем (значит, уведомления не настроены)."""
+    token = os.getenv("TELEGRAM_TOKEN")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+    if not token or not chat_id:
+        return
+    try:
+        requests.post(
+            f"https://api.telegram.org/bot{token}/sendMessage",
+            data={"chat_id": chat_id, "text": message},
+            timeout=10,
+        )
+    except requests.RequestException as e:
+        print(f"[!] Не удалось отправить в Telegram: {e}")
+
+
+
 def main():
-    any_down = False                       # встретился ли хоть один недоступный сайт
+    down_sites = []                        # сюда складываем недоступные сайты
     for target in load_targets():
         result = check(target)
         save_log(result)
         if ENABLE_ES:                      # в CI отправку в ES отключаем флагом
             send_to_elasticsearch(result)
         if result["status"] == "DOWN":
-            any_down = True
+            down_sites.append(result)
 
-    # Если что-то недоступно — выходим с ошибкой, чтобы прогон в CI стал красным (алерт).
-    if any_down:
+    # Если есть падения — формируем текст и шлём уведомление в Telegram
+    if down_sites:
+        lines = ["⚠️ Обнаружены недоступные сайты:"]
+        for r in down_sites:
+            reason = r.get("status_code") or r.get("error", "нет ответа")
+            lines.append(f"- {r['target_name']} ({r['url']}): {reason}")
+        send_telegram("\n".join(lines))
+
+        # выходим с ошибкой, чтобы прогон в CI стал красным (алерт)
         sys.exit(1)
 
 
