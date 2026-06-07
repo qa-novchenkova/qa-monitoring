@@ -1,29 +1,55 @@
-# Автозапуск автотестов на сервере GitHub при каждом пуше.
+# Прогон автотестов + публикация Allure-отчёта на GitHub Pages с историей.
 name: Autotests
 
 on:
-  push:                      # запускать при пуше...
-    branches: [ main, master ]
-  workflow_dispatch:         # ...и по кнопке "Run workflow" вручную
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write          # право публиковать отчёт в ветку gh-pages
 
 jobs:
   tests:
-    runs-on: ubuntu-latest   # бесплатная виртуалка GitHub с уже установленным Chrome
+    runs-on: ubuntu-latest
     env:
-      HEADLESS: "true"       # включаем безголовый режим браузера
+      HEADLESS: "true"
     steps:
-      - uses: actions/checkout@v4            # скачать наш код в виртуалку
+      - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5        # установить Python
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.10"
 
-      - run: pip install -r requirements.txt # поставить библиотеки
+      - run: pip install -r requirements.txt
 
-      - run: pytest --alluredir=allure-results  # прогнать тесты + собрать данные для Allure
+      - run: pytest --alluredir=allure-results
+        continue-on-error: true        # отчёт соберём даже если тест упал
 
-      - uses: actions/upload-artifact@v4     # сохранить результаты Allure как артефакт
-        if: always()                         # даже если тесты упали
+      # 1) подтягиваем историю прошлых отчётов из ветки gh-pages
+      - name: Get Allure history
+        uses: actions/checkout@v4
+        if: always()
+        continue-on-error: true
         with:
-          name: allure-results
-          path: allure-results
+          ref: gh-pages
+          path: gh-pages
+
+      # 2) генерируем HTML-отчёт с учётом истории
+      - name: Generate Allure report
+        uses: simple-elf/allure-report-action@master
+        if: always()
+        with:
+          allure_results: allure-results
+          allure_history: allure-history
+          gh_pages: gh-pages
+          keep_reports: 20             # храним последние 20 прогонов
+
+      # 3) публикуем отчёт на GitHub Pages
+      - name: Publish to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        if: always()
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: allure-history
