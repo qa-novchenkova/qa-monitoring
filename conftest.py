@@ -1,32 +1,35 @@
-# conftest.py — общие "заготовки" (фикстуры) для всех тестов.
-# pytest сам находит этот файл и применяет фикстуры там, где они нужны.
-# фикстура driver один раз открывает и закрывает браузер для всех тестов.
+# conftest.py — общий файл pytest с "фикстурами" (заготовками для тестов).
+# pytest сам находит этот файл и подставляет фикстуру в тест, которому она нужна
+# (тест просто принимает аргумент с именем фикстуры, например driver).
+#
+# Здесь живёт фикстура driver: открывает браузер ДО теста и закрывает ПОСЛЕ,
+# чтобы не дублировать этот код в каждом тесте.
 
-
-import os
+import os                                               # чтение переменных окружения (для HEADLESS)
 import pytest
 from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.options import Options   # настройки запуска Chrome
 
 
-@pytest.fixture
+@pytest.fixture                                         # помечаем функцию как фикстуру pytest
 def driver():
-    # Настройки браузера: глушим лишние технические сообщения в консоли
+    # Настройки браузера
     options = Options()
-    options.add_argument("--log-level=3")
-    options.add_experimental_option("excludeSwitches", ["enable-logging"])
+    options.add_argument("--log-level=3")               # показывать только серьёзные сообщения Chrome
+    options.add_experimental_option("excludeSwitches", ["enable-logging"])  # убрать "шум" в консоли
 
-    # В CI (на сервере GitHub) нет экрана — запускаем браузер без окна.
+    # На сервере GitHub (CI) нет экрана -> браузер запускаем без окна (headless).
+    # Локально переменной HEADLESS нет -> браузер открывается видимым окном.
     if os.getenv("HEADLESS") == "true":
-        options.add_argument("--headless=new")
-        options.add_argument("--window-size=1920,1080")
+        options.add_argument("--headless=new")          # режим без видимого окна
+        options.add_argument("--window-size=1920,1080") # размер "экрана" для headless
 
-    # --- ПОДГОТОВКА (до теста) ---
-    driver = webdriver.Chrome(options=options)
-    driver.implicitly_wait(5)
-    driver.maximize_window()
+    # --- ПОДГОТОВКА: выполняется ДО каждого теста ---
+    driver = webdriver.Chrome(options=options)          # запускаем браузер с настройками
+    driver.implicitly_wait(10)                           # ждать элемент до 10 сек, прежде чем упасть
+    driver.maximize_window()                            # развернуть окно
 
-    yield driver # отдаём готовый браузер в тест
+    yield driver                                        # отдаём браузер в тест и "замираем" здесь
 
-    # --- УБОРКА (после теста, всегда) ---
-    driver.quit()
+    # --- УБОРКА: выполняется ПОСЛЕ каждого теста (даже если он упал) ---
+    driver.quit()                                       # закрываем браузер, чтобы не висел в памяти
