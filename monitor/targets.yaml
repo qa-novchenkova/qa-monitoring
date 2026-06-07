@@ -1,0 +1,7 @@
+# Список сайтов для мониторинга.
+# Чтобы добавить новый сайт — просто нужно дописать ещё один блок name + url. Код менять не нужно.
+targets:
+  - name: "QA Dev Toolbox"
+    url: "https://qa-novchenkova.github.io/qa-dev-toolbox/"
+  - name: "Swag Labs (saucedemo)"
+    url: "https://www.saucedemo.com/"

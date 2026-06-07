@@ -1,0 +1,29 @@
+# docker-compose.yml — описывает, какие контейнеры поднять и как их настроить.
+# Запуск:   docker compose up -d   (в этой папке)
+# Остановка: docker compose down
+
+services:                 # список контейнеров (сервисов), которые поднимаем
+  elasticsearch:          # сервис №1 — хранилище логов (поиск/база)
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4  # какой образ скачать
+    container_name: qa-elasticsearch     # имя контейнера (видно в Docker Desktop)
+    environment:          # настройки, передаём их программе через переменные окружения
+      - discovery.type=single-node       # один узел для учебного проекта хватит
+      - xpack.security.enabled=false     # отключаем пароли/сертификаты, чтобы не усложнять
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g       # ограничиваем потребление памяти 1 ГБ
+    ports:
+      - "9200:9200"       # пробрасываем порт наружу: открывается на localhost:9200
+    volumes:
+      - es-data:/usr/share/elasticsearch/data  # сохраняем данные, чтобы не терялись при перезапуске
+
+  kibana:                 # сервис №2 — визуальная панель (графики/дашборды)
+    image: docker.elastic.co/kibana/kibana:8.13.4
+    container_name: qa-kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200  # говорим Kibana, где искать Elasticsearch
+    ports:
+      - "5601:5601"       # Kibana откроется на localhost:5601
+    depends_on:
+      - elasticsearch     # сначала стартует elasticsearch, потом kibana
+
+volumes:                  # объявляем хранилище для данных Elasticsearch
+  es-data:
