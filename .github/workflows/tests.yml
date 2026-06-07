@@ -1,0 +1,29 @@
+# Автозапуск автотестов на сервере GitHub при каждом пуше.
+name: Autotests
+
+on:
+  push:                      # запускать при пуше...
+    branches: [ main, master ]
+  workflow_dispatch:         # ...и по кнопке "Run workflow" вручную
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest   # бесплатная виртуалка GitHub с уже установленным Chrome
+    env:
+      HEADLESS: "true"       # включаем безголовый режим браузера
+    steps:
+      - uses: actions/checkout@v4            # скачать наш код в виртуалку
+
+      - uses: actions/setup-python@v5        # установить Python
+        with:
+          python-version: "3.10"
+
+      - run: pip install -r requirements.txt # поставить библиотеки
+
+      - run: pytest --alluredir=allure-results  # прогнать тесты + собрать данные для Allure
+
+      - uses: actions/upload-artifact@v4     # сохранить результаты Allure как артефакт
+        if: always()                         # даже если тесты упали
+        with:
+          name: allure-results
+          path: allure-results
