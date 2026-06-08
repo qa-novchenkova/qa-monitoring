@@ -11,6 +11,8 @@
 - **Allure-отчёт (онлайн):** https://qa-novchenkova.github.io/qa-monitoring/
 - **Репозиторий:** https://github.com/qa-novchenkova/qa-monitoring
 
+- **Подробный разбор проекта:** https://github.com/qa-novchenkova/qa-monitoring/blob/main/Project_analysis.md
+
 ## 🖼️ Скриншоты
 
 ### Allure — отчёт по автотестам
